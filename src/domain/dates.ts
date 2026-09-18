@@ -51,3 +51,37 @@ export function daysInclusive(first: DateKey, last: DateKey): readonly DateKey[]
 
   return days;
 }
+
+/**
+ * Monday of the Mon–Sun week containing `key`.
+ *
+ * `getDay()` numbers Sunday 0, which would make Sunday the *start* of a week;
+ * SPEC's lifting week closes on Sunday, so Sunday is renumbered 7.
+ */
+export function mondayOf(key: DateKey): DateKey {
+  const weekday = atNoon(key).getDay() || 7;
+
+  return addDays(key, 1 - weekday);
+}
+
+/** Sunday that closes the Mon–Sun week containing `key`. */
+export function sundayOf(key: DateKey): DateKey {
+  return addDays(mondayOf(key), 6);
+}
+
+/**
+ * Monday of every week from the week containing `first` through the week
+ * containing `last`, oldest first. Empty when `last` precedes that first week.
+ */
+export function weeksInclusive(first: DateKey, last: DateKey): readonly DateKey[] {
+  const weeks: DateKey[] = [];
+
+  // As in `daysInclusive`, zero-padded keys compare in calendar order. A week
+  // is included when its Monday falls on or before `last`, so a partial final
+  // week still appears.
+  for (let week = mondayOf(first); week <= last; week = addDays(week, 7)) {
+    weeks.push(week);
+  }
+
+  return weeks;
+}

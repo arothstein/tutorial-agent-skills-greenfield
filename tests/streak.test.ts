@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Period } from '../src/domain/periods';
-import { computeStreak, dailyStreak } from '../src/domain/streak';
+import { computeStreak, dailyStreak, weeklyStreak } from '../src/domain/streak';
 
 /** 'HHM' -> three scored periods, oldest first. */
 function periodsFrom(sequence: string): readonly Period[] {
@@ -143,5 +143,95 @@ describe('dailyStreak — a streak from a list of completed dates', () => {
     );
 
     expect(streak).toEqual({ count: 3, misses: 0, unit: 'days' });
+  });
+});
+
+describe('weeklyStreak — a streak over Mon–Sun weeks (AC5)', () => {
+  it('counts one week per week holding at least the target logged days', () => {
+    // Three weeks of three sessions each: Mon/Wed/Fri from 08-31 onward.
+    const log = [
+      '2026-08-31',
+      '2026-09-02',
+      '2026-09-04',
+      '2026-09-07',
+      '2026-09-09',
+      '2026-09-11',
+      '2026-09-14',
+      '2026-09-16',
+      '2026-09-18',
+    ];
+
+    expect(weeklyStreak(log, 3, '2026-08-31', '2026-09-21')).toEqual({
+      count: 3,
+      misses: 0,
+      unit: 'weeks',
+    });
+  });
+
+  it('does not score the current week as a miss while it is still open', () => {
+    // Today is Thu 09-17 with one session logged this week. The two complete
+    // weeks behind it must stand.
+    const log = [
+      '2026-08-31',
+      '2026-09-02',
+      '2026-09-04',
+      '2026-09-07',
+      '2026-09-09',
+      '2026-09-11',
+      '2026-09-14',
+    ];
+
+    expect(weeklyStreak(log, 3, '2026-08-31', '2026-09-17')).toEqual({
+      count: 2,
+      misses: 0,
+      unit: 'weeks',
+    });
+  });
+
+  it('ticks up mid-week the moment the target is reached (D2)', () => {
+    const log = ['2026-09-07', '2026-09-09', '2026-09-11', '2026-09-14', '2026-09-15'];
+    const beforeTheThird = weeklyStreak(log, 3, '2026-09-07', '2026-09-17');
+    const afterTheThird = weeklyStreak([...log, '2026-09-16'], 3, '2026-09-07', '2026-09-17');
+
+    expect(beforeTheThird.count).toBe(1);
+    expect(afterTheThird.count).toBe(2);
+  });
+
+  it('forgives one short week without reducing the count', () => {
+    // Week of 09-07 holds only two sessions; the count holds at 2 and is annotated.
+    const log = [
+      '2026-08-31',
+      '2026-09-02',
+      '2026-09-04',
+      '2026-09-07',
+      '2026-09-09',
+      '2026-09-14',
+      '2026-09-16',
+      '2026-09-18',
+    ];
+
+    expect(weeklyStreak(log, 3, '2026-08-31', '2026-09-21')).toEqual({
+      count: 2,
+      misses: 1,
+      unit: 'weeks',
+    });
+  });
+
+  it('resets to zero after two consecutive short weeks', () => {
+    const log = ['2026-08-31', '2026-09-02', '2026-09-04', '2026-09-07', '2026-09-14'];
+
+    expect(weeklyStreak(log, 3, '2026-08-31', '2026-09-21')).toEqual({
+      count: 0,
+      misses: 0,
+      unit: 'weeks',
+    });
+  });
+
+  it('is zero on the first run with nothing logged', () => {
+    expect(weeklyStreak([], 3, '2026-09-17', '2026-09-17')).toEqual({
+      count: 0,
+      misses: 0,
+      unit: 'weeks',
+    });
   });
 });

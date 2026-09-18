@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { addDays, daysInclusive, toDateKey } from '../src/domain/dates';
+import {
+  addDays,
+  daysInclusive,
+  mondayOf,
+  sundayOf,
+  toDateKey,
+  weeksInclusive,
+} from '../src/domain/dates';
 
 describe('toDateKey', () => {
   it('formats from local components, not the UTC instant', () => {
@@ -59,5 +66,76 @@ describe('daysInclusive', () => {
 
   it('returns nothing when the last date precedes the first', () => {
     expect(daysInclusive('2026-09-15', '2026-09-14')).toEqual([]);
+  });
+});
+
+describe('mondayOf', () => {
+  it('walks back to the Monday of a mid-week date', () => {
+    expect(mondayOf('2026-09-17')).toBe('2026-09-14');
+  });
+
+  it('returns the date itself when it is already a Monday', () => {
+    expect(mondayOf('2026-09-14')).toBe('2026-09-14');
+  });
+
+  it('treats Sunday as the last day of the week, not the first', () => {
+    // The Sunday→Monday rollover: 09-20 belongs to the week that began 09-14,
+    // and 09-21 starts a new one. A Sunday-first week would report 09-20.
+    expect(mondayOf('2026-09-20')).toBe('2026-09-14');
+    expect(mondayOf('2026-09-21')).toBe('2026-09-21');
+  });
+
+  it('crosses a month boundary', () => {
+    expect(mondayOf('2026-09-01')).toBe('2026-08-31');
+  });
+
+  it('crosses a year boundary', () => {
+    expect(mondayOf('2027-01-03')).toBe('2026-12-28');
+  });
+
+  it('survives a fall-back DST Sunday', () => {
+    // 2026-11-01 is a 25-hour day in US locales.
+    expect(mondayOf('2026-11-01')).toBe('2026-10-26');
+  });
+});
+
+describe('sundayOf', () => {
+  it('walks forward to the Sunday that closes the week', () => {
+    expect(sundayOf('2026-09-17')).toBe('2026-09-20');
+  });
+
+  it('returns the date itself when it is already a Sunday', () => {
+    expect(sundayOf('2026-09-20')).toBe('2026-09-20');
+  });
+
+  it('closes a week that spans a leap day', () => {
+    expect(sundayOf('2028-02-28')).toBe('2028-03-05');
+  });
+
+  it('survives a spring-forward DST week', () => {
+    // 2026-03-08 is a 23-hour day in US locales.
+    expect(sundayOf('2026-03-02')).toBe('2026-03-08');
+  });
+});
+
+describe('weeksInclusive', () => {
+  it('returns the Monday of every week from the first date through the last', () => {
+    expect(weeksInclusive('2026-09-17', '2026-10-01')).toEqual([
+      '2026-09-14',
+      '2026-09-21',
+      '2026-09-28',
+    ]);
+  });
+
+  it('returns a single week when both dates fall inside it', () => {
+    expect(weeksInclusive('2026-09-14', '2026-09-20')).toEqual(['2026-09-14']);
+  });
+
+  it('returns nothing when the last date precedes the first week', () => {
+    expect(weeksInclusive('2026-09-14', '2026-09-13')).toEqual([]);
+  });
+
+  it('steps across a year boundary', () => {
+    expect(weeksInclusive('2026-12-28', '2027-01-04')).toEqual(['2026-12-28', '2027-01-04']);
   });
 });

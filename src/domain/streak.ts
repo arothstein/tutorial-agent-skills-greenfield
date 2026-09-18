@@ -1,5 +1,5 @@
 import type { DateKey } from './dates';
-import { dailyPeriods, type Period } from './periods';
+import { dailyPeriods, weeklyPeriods, type Period } from './periods';
 
 export interface Streak {
   readonly count: number;
@@ -50,5 +50,24 @@ export function dailyStreak(
   return {
     ...computeStreak(dailyPeriods(log, startedOn, today)),
     unit: 'days',
+  };
+}
+
+/**
+ * Current streak for a weekly habit, in Mon-Sun weeks.
+ *
+ * Same forgiveness rule as the daily walk, applied at week granularity: one
+ * short week holds the count, two in a row reset it (AC5).
+ * Pure: `today` is injected, never read from the clock.
+ */
+export function weeklyStreak(
+  log: readonly DateKey[],
+  target: number,
+  startedOn: DateKey,
+  today: DateKey,
+): StreakResult {
+  return {
+    ...computeStreak(weeklyPeriods(log, target, startedOn, today)),
+    unit: 'weeks',
   };
 }
