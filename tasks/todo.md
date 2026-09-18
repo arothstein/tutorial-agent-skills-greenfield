@@ -14,10 +14,12 @@ Plan Open Question 1 is closed.
 **Next up:** Task 12 (history strip), then Phase 5 (backup). Task 13 can start in
 parallel — `storage/schema.ts` already holds the validator it needs.
 
-**Awaiting you:** three checkpoints now end in a human review — Foundation,
-Domain core, and UI slices. Everything mechanical in them passes; the reviews
-themselves are outstanding. The UI slices checkpoint also needs the in-browser
-pass: the jsdom suite covers the flow, but nobody has yet opened the built page.
+The in-browser pass on Phase 4 is **done**: checked against `pnpm run dev` on
+2026-09-18.
+
+**Awaiting you:** three checkpoints end in a human review — Foundation, Domain
+core, and UI slices. Everything mechanical in them passes, and the UI has now been
+seen running; the code reviews themselves are outstanding.
 
 Legend: `[x]` complete and verified · `[ ]` not started.
 
@@ -141,10 +143,9 @@ Legend: `[x]` complete and verified · `[ ]` not started.
     moves when back-filling past it is this task's decision to make.
 
 ### Checkpoint: UI slices
-- [ ] Core flow works end to end in the browser: toggle → streak → reload → intact
-  - Covered in jsdom, including reload-renders-identically. **The in-browser pass
-    is outstanding** — the built page has been served and its assets resolve, but
-    nobody has clicked it.
+- [x] Core flow works end to end in the browser: toggle → streak → reload → intact
+  - Checked in the browser via `pnpm run dev` on 2026-09-18, on top of the jsdom
+    coverage of the same flow including reload-renders-identically.
 - [x] AC1 holds — no combined number anywhere in the UI
 - [x] Keyboard-only operation of every toggle and history cell
   - Every toggle is a real `<button type="button">` with no `tabindex`, carrying
