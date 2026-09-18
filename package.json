@@ -2,13 +2,18 @@
   "name": "habit-tracker",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.3.4",
   "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
+    "vite": "^6.4.3",
     "vitest": "^3.2.4"
   }
 }
