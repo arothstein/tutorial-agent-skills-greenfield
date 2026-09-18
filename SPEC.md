@@ -87,7 +87,7 @@ Build:     pnpm run build            # tsc --noEmit && vite build
 Preview:   pnpm run preview
 Test:      pnpm test                 # vitest run
 Watch:     pnpm run test:watch       # vitest
-Coverage:  pnpm test -- --coverage
+Coverage:  pnpm test --coverage
 Typecheck: pnpm run typecheck        # tsc --noEmit
 Lint:      pnpm run lint             # eslint . --max-warnings 0
 Lint fix:  pnpm run lint -- --fix
@@ -596,7 +596,7 @@ Done means all of the following hold:
 
 - [ ] AC1–AC8 above pass as automated tests.
 - [ ] `pnpm run build` succeeds with zero type errors and zero lint warnings.
-- [ ] `pnpm test -- --coverage` passes with 100% branch coverage on `streak.ts`
+- [ ] `pnpm test --coverage` passes with 100% branch coverage on `streak.ts`
       and `dates.ts`, and at least 85% overall.
 - [ ] The no-network test is present and would fail if a `fetch` were added.
 - [ ] Every state in the Screens and States table is reachable and has a test or

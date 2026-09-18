@@ -36,6 +36,23 @@ export function addDays(key: DateKey, days: number): DateKey {
   return toDateKey(date);
 }
 
+/** Milliseconds in a 24-hour day. Only ever used against noon-anchored dates. */
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Whole days from `from` to `to`; negative when `to` is earlier.
+ *
+ * Both ends anchor at noon, so a 23- or 25-hour DST day leaves the quotient
+ * within half a day of the true count and `Math.round` recovers it.
+ *
+ * This is a span, not a countdown: the Thursday-to-Sunday span is 3, while the
+ * "4 days left" the lifting row shows counts today too. Add one at the call
+ * site rather than bending this.
+ */
+export function daysBetween(from: DateKey, to: DateKey): number {
+  return Math.round((atNoon(to).getTime() - atNoon(from).getTime()) / ONE_DAY_MS);
+}
+
 /**
  * Every date from `first` through `last`, oldest first. Empty when `last`
  * precedes `first`.

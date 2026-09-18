@@ -274,7 +274,7 @@ where DST would produce a 23-hour day; it is built before anything depends on it
 
 **Verification:**
 - [ ] Tests pass: `pnpm test -- tests/dates.test.ts`
-- [ ] Coverage: `pnpm test -- --coverage` reports **100% branch** on
+- [ ] Coverage: `pnpm test --coverage` reports **100% branch** on
       `src/domain/dates.ts`
 - [ ] Manual check: every test sets a fixed clock via `vi.setSystemTime`; grep
       confirms no test reads the real date.
@@ -309,7 +309,7 @@ immediately.
 
 **Verification:**
 - [ ] Tests pass: `pnpm test -- tests/periods.test.ts`
-- [ ] Coverage: `pnpm test -- --coverage` reports 100% branch on
+- [ ] Coverage: `pnpm test --coverage` reports 100% branch on
       `src/domain/periods.ts`
 - [ ] Manual check: a fixture where `startedOn` is mid-week produces a first
       weekly period starting at that week's Monday, not at `startedOn`.
@@ -347,7 +347,7 @@ project — hence early.
 
 **Verification:**
 - [ ] Tests pass: `pnpm test -- tests/streak.test.ts`
-- [ ] Coverage: `pnpm test -- --coverage` reports **100% branch** on
+- [ ] Coverage: `pnpm test --coverage` reports **100% branch** on
       `src/domain/streak.ts`
 - [ ] Manual check: grep `src/domain/` for `new Date(`, `localStorage`,
       `document` and `fetch` — all absent.
@@ -578,7 +578,7 @@ result. No DOM in this module.
 
 **Verification:**
 - [ ] Tests pass: `pnpm test -- tests/backup.test.ts`
-- [ ] Coverage: `pnpm test -- --coverage` reports `src/storage/` at >= 90% lines
+- [ ] Coverage: `pnpm test --coverage` reports `src/storage/` at >= 90% lines
 - [ ] Manual check: a backup file from a real session re-imports to an identical
       state object.
 
@@ -675,7 +675,7 @@ domain suites cannot see.
 
 **Verification:**
 - [ ] Tests pass: `pnpm test`
-- [ ] Coverage: `pnpm test -- --coverage` reports >= 85% lines overall
+- [ ] Coverage: `pnpm test --coverage` reports >= 85% lines overall
 - [ ] Manual check: the suite runs with a fixed clock throughout; no test reads
       the real date.
 
@@ -706,7 +706,7 @@ unenforced promise.
       data, Load backup, state intact.
 
 **Verification:**
-- [ ] Tests pass: `pnpm test -- --coverage`
+- [ ] Tests pass: `pnpm test --coverage`
 - [ ] Build succeeds: `pnpm run build` with zero type errors and zero lint warnings
 - [ ] Manual check: as above, on `pnpm run preview`, results recorded in the README.
 

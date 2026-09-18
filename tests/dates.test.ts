@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   addDays,
+  daysBetween,
   daysInclusive,
   mondayOf,
   sundayOf,
@@ -137,5 +138,41 @@ describe('weeksInclusive', () => {
 
   it('steps across a year boundary', () => {
     expect(weeksInclusive('2026-12-28', '2027-01-04')).toEqual(['2026-12-28', '2027-01-04']);
+  });
+});
+
+describe('daysBetween', () => {
+  it('is zero for the same date', () => {
+    expect(daysBetween('2026-09-17', '2026-09-17')).toBe(0);
+  });
+
+  it('counts forward to a later date', () => {
+    // Thursday to the Sunday that closes its week.
+    expect(daysBetween('2026-09-17', '2026-09-20')).toBe(3);
+  });
+
+  it('is negative when the second date is earlier', () => {
+    expect(daysBetween('2026-09-20', '2026-09-17')).toBe(-3);
+  });
+
+  it('counts across a month boundary', () => {
+    expect(daysBetween('2026-08-30', '2026-09-02')).toBe(3);
+  });
+
+  it('counts across a year boundary', () => {
+    expect(daysBetween('2026-12-31', '2027-01-01')).toBe(1);
+  });
+
+  it('counts a span containing a leap day', () => {
+    expect(daysBetween('2028-02-28', '2028-03-01')).toBe(2);
+  });
+
+  it('survives a span containing a spring-forward 23-hour day', () => {
+    // Dividing elapsed milliseconds by 24h would give 1.96 here, not 2.
+    expect(daysBetween('2026-03-07', '2026-03-09')).toBe(2);
+  });
+
+  it('survives a span containing a fall-back 25-hour day', () => {
+    expect(daysBetween('2026-10-31', '2026-11-02')).toBe(2);
   });
 });
