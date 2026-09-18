@@ -3,85 +3,78 @@
 Full specifications (acceptance criteria, verification, files, scope) live in
 [tasks/plan.md](plan.md). This file is the ordered checklist.
 
-**Status as of 2026-09-18:** Phase 2 (the domain core) is essentially complete —
-`dates.ts`, `periods.ts` and `streak.ts` are built and proved by 68 passing tests.
-Phases 1–2 were partly skipped to get there: there is **no Vite build, no ESLint,
-no jsdom, no no-network guard, and no `model.ts`**. Those gaps are itemized below
-and now block Phase 4.
+**Status as of 2026-09-18:** **Phases 1 and 2 are complete.** 102 tests passing;
+`test`, `typecheck`, `lint` and `build` all green; 100% branch and line coverage
+on every domain module, measured rather than asserted.
 
-**Next up:** Task 3 (`model.ts` + frozen `HABITS`), which unblocks `streakFor`
-and everything in Phase 4. Tasks 1–2 should be finished before then, since their
-gates (`lint`, `build`, AC7) were meant to protect every later task.
+D1–D3 were confirmed on 2026-09-18 and are encoded in `periods.ts` / `streak.ts`.
+Plan Open Question 1 is closed.
 
-**Still blocked on:** Open Question 1 in the plan — confirm or overrule SPEC
-decisions D1–D3. **Tasks 5 and 6 landed without that confirmation and encode all
-three directly**, so overruling one now means rewriting the period/streak logic.
+**Next up:** Task 7 (`localStore.ts`). Phase 3 depends only on Task 3, which is
+now done, so Phase 3 and Phase 4's Task 9 are unblocked.
 
-Legend: `[x]` complete and verified · `[ ]` not started · `[ ]` **Partial** —
-some acceptance criteria met, remainder listed underneath.
+**Awaiting you:** the Foundation and Domain core checkpoints both end in a human
+review. Everything mechanical in them passes; the review itself is outstanding.
+
+Legend: `[x]` complete and verified · `[ ]` not started.
 
 ---
 
 ## Phase 1: Foundation
 
-- [ ] **Task 1: Project toolchain** — Vite + TS strict, zero runtime deps, pnpm scripts. *(S, no deps)*
-  - **Partial.** Done: pnpm, `tsconfig.json` with `strict` + `noUncheckedIndexedAccess`,
-    zero `dependencies`, `pnpm-lock.yaml` committed.
-  - Remaining: Vite itself — `vite.config.ts`, `index.html`, and the
-    `dev` / `build` / `preview` scripts (`build` must run `tsc --noEmit` first);
-    the `packageManager: "pnpm@<version>"` field.
-- [ ] **Task 2: Test and lint harness with the no-network guard** — Vitest + jsdom + ESLint; throwing stubs for `fetch`/XHR/WebSocket/`sendBeacon`/EventSource (AC7). *(S, after T1)*
-  - **Partial.** Done: Vitest with `test` and `test:watch`, running green.
-  - Remaining: jsdom + `@testing-library/dom`; ESLint + a `lint` script at
-    `--max-warnings 0`; the global no-network setup file and
-    `tests/no-network.test.ts`. **AC7 is currently unprotected.**
-- [ ] **Task 3: Domain model and the three fixed habits** — `AppState`, `HabitId`, frozen `HABITS`, `emptyState`. *(S, after T2)*
-  - Not started. `src/domain/model.ts` does not exist; this is what blocks
-    `streakFor` (Task 6) and all of Phase 4.
+- [x] **Task 1: Project toolchain** — Vite + TS strict, zero runtime deps, pnpm scripts. *(S, no deps)*
+  - Vite 6 with `dev` / `build` / `preview`; `build` runs `tsc --noEmit` first.
+    `packageManager` pinned, lockfile committed, zero `dependencies`.
+  - `src/main.ts` is a placeholder Task 9 replaces — it exists so the build
+    exercises the TypeScript pipeline rather than bundling an empty page.
+- [x] **Task 2: Test and lint harness with the no-network guard** — Vitest + jsdom + ESLint; throwing stubs for `fetch`/XHR/WebSocket/`sendBeacon`/EventSource (AC7). *(S, after T1)*
+  - Guard loaded via `setupFiles`, so it covers every suite rather than only the
+    test that checks it. jsdom is the environment for the whole suite for the
+    same reason.
+  - ESLint enforces the plan's Definition of Done: no `any`, no non-null
+    assertion, no `@ts-` silencing.
+- [x] **Task 3: Domain model and the three fixed habits** — `AppState`, `HabitId`, frozen `HABITS`, `emptyState`. *(S, after T2)*
+  - The fixed-habit invariant is carried by `Record<HabitId, Habit>`: a fourth
+    id without a definition fails `typecheck` in two places.
+  - `DateKey` stays in `dates.ts` and is re-exported from `model.ts`, so SPEC's
+    `import type { DateKey, Habit } from './model'` still resolves.
 
-### Checkpoint: Foundation — **not met**
-- [ ] `pnpm test`, `pnpm run typecheck`, `pnpm run lint`, `pnpm run build` all green
-  - `pnpm test` (68 passing) and `pnpm run typecheck` are green; `lint` and
-    `build` do not exist yet.
-- [ ] The no-network guard demonstrably fails the run when a `fetch` is added
+### Checkpoint: Foundation — **mechanically met; review outstanding**
+- [x] `pnpm test`, `pnpm run typecheck`, `pnpm run lint`, `pnpm run build` all green
+- [x] The no-network guard demonstrably fails the run when a `fetch` is added
+  - Verified by smuggling `fetch('/api/telemetry')` into `computeStreak`: the
+    streak suite failed naming the call site. Removed.
 - [x] `package.json` has zero `dependencies`
 - [ ] Review with human before proceeding
 
 ## Phase 2: Domain core (the product thesis)
 
 - [x] **Task 4: `dates.ts`** — local date keys (never `toISOString`), noon-normalized day math, Mon–Sun weeks. *(S, after T3)*
-  - `toDateKey`, `addDays`, `daysInclusive`, `mondayOf`, `sundayOf`,
-    `weeksInclusive`. 25 tests: negative-offset evening, both DST transitions,
-    leap day, month/year rollover, Sunday→Monday rollover.
-  - Two deltas from the plan: `eachDay` shipped as **`daysInclusive`**, and
-    **`daysBetween` was not built** — deferred until Task 11 needs "days left".
+  - `toDateKey`, `addDays`, `daysBetween`, `daysInclusive`, `mondayOf`,
+    `sundayOf`, `weeksInclusive`. 33 tests.
+  - `daysBetween` is a span, not a countdown: Thursday→Sunday is 3, while the
+    lifting row's "4 days left" counts today too. Task 11 adds the one.
 - [x] **Task 5: `periods.ts`** — daily/weekly period lists; open period appended only if it already hits (D2). *(S, after T4)*
-  - `dailyPeriods` and `weeklyPeriods(log, target, startedOn, today)`. 17 tests
-    covering the `>= target` distinct-days rule, duplicates not inflating a week
-    (D1), no spill across the Sunday/Monday seam, a mid-week `startedOn` starting
-    at that week's Monday, and the open week appended only on a hit (D2).
-  - Spec delta to fold back in: SPEC's "Project Structure" still omits
-    `periods.ts`, which its own code sample imports.
-- [ ] **Task 6: `streak.ts`** — `computeStreak` + `streakFor`; table-driven over SPEC's worked cases. *(S, after T5)*
-  - **Partial.** Done: `computeStreak` with all eight SPEC worked cases as a
-    table-driven suite, plus `dailyStreak` and `weeklyStreak` (26 tests; AC2–AC5
-    each named).
-  - Remaining: **`streakFor(habit, ...)`** — blocked on Task 3's `Habit` type —
-    and the AC1 test that the three habits streak independently, which needs
-    `HABITS`.
+  - 17 tests: the `>= target` distinct-days rule, duplicates not inflating a
+    week (D1), no spill across the Sunday/Monday seam, a mid-week `startedOn`
+    starting at that week's Monday, the open week appended only on a hit (D2).
+  - Spec delta closed: `periods.ts` is now listed in SPEC's Project Structure.
+- [x] **Task 6: `streak.ts`** — `computeStreak` + `streakFor`; table-driven over SPEC's worked cases. *(S, after T5)*
+  - All eight SPEC worked cases as a table, plus `dailyStreak`, `weeklyStreak`
+    and `streakFor` — the one place cadence is dispatched on. 33 tests.
 
-### Checkpoint: Domain core — **mostly met, two items open**
-- [ ] 100% branch coverage on `dates.ts`, `periods.ts`, `streak.ts`
-  - **Unverified, not failed.** `@vitest/coverage-v8` is not installed, so
-    `--coverage` cannot run. Every branch in these files is exercised by a named
-    test, but there is no instrumented number yet.
+### Checkpoint: Domain core — **mechanically met; review outstanding**
+- [x] 100% branch coverage on `dates.ts`, `periods.ts`, `streak.ts`
+  - Measured: 100% branch **and** line on all five domain modules. The only
+    uncovered file in `src/` is the `main.ts` placeholder.
 - [x] All eight SPEC worked cases pass; AC2–AC5 each have a named test
-- [x] `src/domain/` contains no `new Date(`, `document`, `localStorage` or `fetch`
+- [x] `src/domain/` contains no clock, DOM, storage or network access
+  - `today` is always injected; no `new Date()` anywhere under `src/domain/`.
 - [ ] **Review with human — a wrong rule here is the failure mode that caused abandonment last time**
 
 ## Phase 3: Persistence
 
-- [ ] **Task 7: `localStore.ts`** — load/validate/save, first-run seed, nothing written until first mutation (AC6). *(S, after T3 — parallel with Phase 2)*
+- [ ] **Task 7: `localStore.ts`** — load/validate/save, first-run seed, nothing written until first mutation (AC6). *(S, after T3 — unblocked)*
 - [ ] **Task 8: Storage failure modes** — memory mode, corruption quarantine, quota, future schema. *(S, after T7)*
 
 ### Checkpoint: Persistence
