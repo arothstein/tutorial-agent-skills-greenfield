@@ -81,16 +81,16 @@ Runtime dependencies: **none**. Everything above is a devDependency.
 ## Commands
 
 ```
-Install:   npm install
-Dev:       npm run dev              # vite, localhost:5173
-Build:     npm run build            # tsc --noEmit && vite build
-Preview:   npm run preview
-Test:      npm test                 # vitest run
-Watch:     npm run test:watch       # vitest
-Coverage:  npm test -- --coverage
-Typecheck: npm run typecheck        # tsc --noEmit
-Lint:      npm run lint             # eslint . --max-warnings 0
-Lint fix:  npm run lint -- --fix
+Install:   pnpm install
+Dev:       pnpm run dev              # vite, localhost:5173
+Build:     pnpm run build            # tsc --noEmit && vite build
+Preview:   pnpm run preview
+Test:      pnpm test                 # vitest run
+Watch:     pnpm run test:watch       # vitest
+Coverage:  pnpm test -- --coverage
+Typecheck: pnpm run typecheck        # tsc --noEmit
+Lint:      pnpm run lint             # eslint . --max-warnings 0
+Lint fix:  pnpm run lint -- --fix
 ```
 
 ## Project Structure
@@ -449,7 +449,7 @@ Conventions:
 ## Testing Strategy
 
 **Framework:** Vitest. **Location:** `tests/`, mirroring `src/`.
-**Command:** `npm test` (CI), `npm run test:watch` (dev).
+**Command:** `pnpm test` (CI), `pnpm run test:watch` (dev).
 
 ### Levels
 
@@ -527,7 +527,7 @@ intact. Then use Save backup, clear site data, Load backup: state intact.
 
 **Always**
 
-- Run `npm test` and `npm run typecheck` before any commit.
+- Run `pnpm test` and `pnpm run typecheck` before any commit.
 - Keep `src/domain/` pure — no DOM, no `localStorage`, no `new Date()`.
 - Validate anything read from `localStorage` or an imported file before use.
 - Update this spec *before* changing the data model, then implement.
@@ -595,8 +595,8 @@ nice-to-have.
 Done means all of the following hold:
 
 - [ ] AC1–AC8 above pass as automated tests.
-- [ ] `npm run build` succeeds with zero type errors and zero lint warnings.
-- [ ] `npm test -- --coverage` passes with 100% branch coverage on `streak.ts`
+- [ ] `pnpm run build` succeeds with zero type errors and zero lint warnings.
+- [ ] `pnpm test -- --coverage` passes with 100% branch coverage on `streak.ts`
       and `dates.ts`, and at least 85% overall.
 - [ ] The no-network test is present and would fail if a `fetch` were added.
 - [ ] Every state in the Screens and States table is reachable and has a test or
