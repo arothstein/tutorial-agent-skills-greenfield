@@ -52,3 +52,34 @@ export function emptyState(today: DateKey): AppState {
     startedOn: today,
   };
 }
+
+/** Whether `habitId` was completed on `day`. Presence in the log is the record. */
+export function isLogged(state: AppState, habitId: HabitId, day: DateKey): boolean {
+  return state.log[habitId].includes(day);
+}
+
+/**
+ * Logs `day` for `habitId`, or un-logs it if it was already there (D1).
+ *
+ * A toggle over a calendar day, not an append: a double tap is harmless and
+ * "3x per week" means three distinct days. The returned log stays sorted and
+ * duplicate-free — the invariant `localStore` writes and validates against.
+ *
+ * `startedOn` is deliberately left alone in both directions. Pulling it back to
+ * a back-filled older day is tempting, but it does not undo: un-toggling that
+ * same day would leave the walk starting earlier than the user ever tracked,
+ * turning every day before it into a miss. An accidental click would reset a
+ * streak, which is the one thing this app must never do. Where the walk starts
+ * when the history strip back-fills past it is that task's decision to make.
+ */
+export function toggleDay(state: AppState, habitId: HabitId, day: DateKey): AppState {
+  const logged = state.log[habitId];
+
+  // Zero-padded keys sort lexicographically in calendar order, so the default
+  // comparator is the right one here.
+  const next = logged.includes(day)
+    ? logged.filter((entry) => entry !== day)
+    : [...logged, day].sort();
+
+  return { ...state, log: { ...state.log, [habitId]: next } };
+}

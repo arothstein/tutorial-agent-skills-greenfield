@@ -29,6 +29,31 @@ function atNoon(key: DateKey): Date {
   return new Date(year, month - 1, day, 12);
 }
 
+/** Shape of a date key. Real-calendar validity is `isDateKey`'s job. */
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * True when `value` is a real local calendar date written 'YYYY-MM-DD'.
+ *
+ * The guard every date read from outside the app — `localStorage`, an imported
+ * backup — passes through before it reaches the streak walk.
+ *
+ * A regex alone is not enough: `new Date(2026, 1, 29)` rolls forward to 1 March
+ * rather than failing, so '2026-02-29' would sail through and then score a day
+ * the user never logged. Formatting the parsed date back out and comparing is
+ * what catches it.
+ *
+ * Years under 100 are rejected as a consequence, since `new Date` maps 0-99 to
+ * 1900-1999. Nothing was tracked in the year 26.
+ */
+export function isDateKey(value: unknown): value is DateKey {
+  if (typeof value !== 'string' || !DATE_KEY_PATTERN.test(value)) {
+    return false;
+  }
+
+  return toDateKey(atNoon(value)) === value;
+}
+
 export function addDays(key: DateKey, days: number): DateKey {
   const date = atNoon(key);
   date.setDate(date.getDate() + days);
@@ -70,15 +95,18 @@ export function daysInclusive(first: DateKey, last: DateKey): readonly DateKey[]
 }
 
 /**
- * Monday of the Mon–Sun week containing `key`.
+ * Weekday of `key`: Monday 1 through Sunday 7.
  *
  * `getDay()` numbers Sunday 0, which would make Sunday the *start* of a week;
  * SPEC's lifting week closes on Sunday, so Sunday is renumbered 7.
  */
-export function mondayOf(key: DateKey): DateKey {
-  const weekday = atNoon(key).getDay() || 7;
+export function weekdayOf(key: DateKey): number {
+  return atNoon(key).getDay() || 7;
+}
 
-  return addDays(key, 1 - weekday);
+/** Monday of the Mon–Sun week containing `key`. */
+export function mondayOf(key: DateKey): DateKey {
+  return addDays(key, 1 - weekdayOf(key));
 }
 
 /** Sunday that closes the Mon–Sun week containing `key`. */

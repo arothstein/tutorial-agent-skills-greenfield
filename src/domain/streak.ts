@@ -74,9 +74,37 @@ export function weeklyStreak(
 }
 
 /**
+ * Whether the walk has scored anything yet.
+ *
+ * The difference between "no streak yet" and "a streak that reset": both read
+ * `0`, and only one of them should be offered a restart. A habit logged twice
+ * this week towards a target of three has scored nothing — its week is still
+ * open — so it is starting, not starting again.
+ *
+ * Asking the period list rather than the log is what makes that exact: the log
+ * cannot distinguish an open period from a closed one, and this is the same
+ * period list the count is walked over.
+ *
+ * Pure: `today` is injected, never read from the clock.
+ */
+export function hasClosedPeriod(
+  habit: Habit,
+  log: readonly DateKey[],
+  startedOn: DateKey,
+  today: DateKey,
+): boolean {
+  const periods =
+    habit.cadence === 'daily'
+      ? dailyPeriods(log, startedOn, today)
+      : weeklyPeriods(log, habit.target, startedOn, today);
+
+  return periods.length > 0;
+}
+
+/**
  * Current streak for one habit, in that habit's own unit.
  *
- * The only place cadence is dispatched on. Everything downstream — the Today
+ * Cadence is dispatched on in this module and nowhere else. Everything downstream — the Today
  * card, the history strip — asks for a habit's streak and is handed a count
  * already labelled `days` or `weeks`, so a week count can never be rendered as
  * if it were days (AC1, AC5).

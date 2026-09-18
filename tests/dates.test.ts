@@ -4,6 +4,7 @@ import {
   addDays,
   daysBetween,
   daysInclusive,
+  isDateKey,
   mondayOf,
   sundayOf,
   toDateKey,
@@ -174,5 +175,63 @@ describe('daysBetween', () => {
 
   it('survives a span containing a fall-back 25-hour day', () => {
     expect(daysBetween('2026-10-31', '2026-11-02')).toBe(2);
+  });
+});
+
+describe('isDateKey — the guard everything read from outside goes through', () => {
+  it('accepts a real calendar date', () => {
+    expect(isDateKey('2026-09-17')).toBe(true);
+  });
+
+  it('accepts a leap day in a leap year', () => {
+    expect(isDateKey('2028-02-29')).toBe(true);
+  });
+
+  it('rejects a leap day in a common year', () => {
+    // `new Date(2026, 1, 29)` silently rolls to 1 March, which would make the
+    // whole streak walk land on a day the user never logged.
+    expect(isDateKey('2026-02-29')).toBe(false);
+  });
+
+  it('rejects a day past the end of its month', () => {
+    expect(isDateKey('2026-04-31')).toBe(false);
+  });
+
+  it('rejects month zero and month thirteen', () => {
+    expect(isDateKey('2026-00-10')).toBe(false);
+    expect(isDateKey('2026-13-01')).toBe(false);
+  });
+
+  it('rejects day zero', () => {
+    expect(isDateKey('2026-09-00')).toBe(false);
+  });
+
+  it('rejects an unpadded date', () => {
+    // Keys are compared and sorted lexicographically; an unpadded key would
+    // sort out of calendar order.
+    expect(isDateKey('2026-9-17')).toBe(false);
+  });
+
+  it('rejects a UTC ISO timestamp', () => {
+    expect(isDateKey('2026-09-17T00:00:00.000Z')).toBe(false);
+  });
+
+  it('rejects a two-digit year, which `new Date` would read as 19xx', () => {
+    expect(isDateKey('0026-09-17')).toBe(false);
+  });
+
+  it('rejects non-numeric components', () => {
+    expect(isDateKey('20x6-09-17')).toBe(false);
+  });
+
+  it('rejects the empty string', () => {
+    expect(isDateKey('')).toBe(false);
+  });
+
+  it('rejects values that are not strings at all', () => {
+    expect(isDateKey(20260917)).toBe(false);
+    expect(isDateKey(null)).toBe(false);
+    expect(isDateKey(undefined)).toBe(false);
+    expect(isDateKey({ date: '2026-09-17' })).toBe(false);
   });
 });

@@ -1,0 +1,350 @@
+/*
+ * One stylesheet, plain CSS, custom properties for the palette.
+ *
+ * The look is deliberately quiet. This is a tool one person opens for ten
+ * seconds a day, most often on a day that did not go well, so nothing here
+ * celebrates and nothing scolds: no alarm colour on a streak, no progress bar
+ * filling up, no badge. The only emphasis on the page is the streak number
+ * itself.
+ *
+ * Light and dark come from `prefers-color-scheme` alone — there is no theme
+ * switch to build, remember or store (SPEC Non-Goals #14).
+ */
+
+:root {
+  /* A 0.25rem scale. Values off it are how spacing drifts. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  --radius: 6px;
+  --radius-pill: 999px;
+
+  --page: #faf9f7;
+  --surface: #ffffff;
+  --text: #1c1b19;
+  --text-muted: #5b574f;
+  --border: #e2dfd8;
+  --border-strong: #cbc7be;
+
+  /* One accent, for "this is done". Never used to mark something wrong. */
+  --accent: #2f6f4f;
+  --accent-surface: #eaf3ed;
+  --accent-border: #a9cdb8;
+
+  --warning-surface: #fdf6e7;
+  --warning-border: #d8b84e;
+  --error-surface: #fbefec;
+  --error-border: #c4553a;
+
+  --focus: #1f5fbf;
+
+  --font:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #141414;
+    --surface: #1d1d1c;
+    --text: #ecebe8;
+    --text-muted: #a8a49c;
+    --border: #322f2b;
+    --border-strong: #46423c;
+
+    --accent: #7cc79c;
+    --accent-surface: #1e2b23;
+    --accent-border: #3c6650;
+
+    --warning-surface: #2a2415;
+    --warning-border: #8a7434;
+    --error-surface: #2c1c18;
+    --error-border: #a5583f;
+
+    --focus: #7aa9ee;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--space-5) var(--space-4);
+  background: var(--page);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  /* Prevents iOS bumping the body up a size in landscape. */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Text only assistive technology reads, out of the layout but not out of the
+   accessibility tree — `display: none` would hide it from both. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app {
+  max-width: 34rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.app__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.app__title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.app__date {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+}
+
+.card__title {
+  margin: 0 0 var(--space-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.hint {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.habits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.habit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border);
+}
+
+.habit:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.habit:last-child {
+  padding-bottom: 0;
+}
+
+.habit__text {
+  /* Lets the row's text shrink before the toggle does; the control keeps its
+     full label down to 320px. */
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.habit__name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 550;
+}
+
+/* The count and its annotation share one weight and one colour: SPEC asks for
+   the miss to read at the same weight as the number, because a greyed-out
+   ", one miss" reads as a demerit rather than as forgiveness. */
+.habit__streak {
+  margin: var(--space-1) 0 0;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.habit__streak .streak__count {
+  font-size: 1.625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.habit__week,
+.habit__hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.habit__separator {
+  color: var(--border-strong);
+}
+
+.pips {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.pip {
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.pip--filled {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  border-color: var(--text-muted);
+}
+
+/* Focus is visible on every control, and only for keyboard use — a mouse click
+   leaving a ring behind reads as a bug and gets styled away, taking keyboard
+   visibility with it. */
+.toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.toggle__box {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.toggle[aria-pressed='true'] {
+  background: var(--accent-surface);
+  border-color: var(--accent-border);
+}
+
+.toggle[aria-pressed='true'] .toggle__box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+}
+
+/* The tick is one of three signals, never the only one: the label changes to
+   "Done today" and `aria-pressed` carries the state for assistive technology.
+   Generated content sits inside an `aria-hidden` element, so it is decoration
+   in every sense. */
+.toggle[aria-pressed='true'] .toggle__box::after {
+  content: '✓';
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toggle {
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+}
+
+.app__notices:empty {
+  display: none;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.notice + .notice {
+  margin-top: var(--space-2);
+}
+
+.notice--warning {
+  background: var(--warning-surface);
+  border-left-color: var(--warning-border);
+}
+
+.notice--error {
+  background: var(--error-surface);
+  border-left-color: var(--error-border);
+}
+
+.notice__heading {
+  font-weight: 600;
+}
+
+.notice__body {
+  margin: 0;
+}
+
+/* The parse error behind a banner: useful when it matters, never the headline. */
+.notice__detail {
+  color: var(--text-muted);
+  /* Breaks a long stored value instead of pushing the page sideways. */
+  overflow-wrap: anywhere;
+}

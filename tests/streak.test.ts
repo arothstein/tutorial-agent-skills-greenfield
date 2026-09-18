@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { daysInclusive } from '../src/domain/dates';
 import { habitById } from '../src/domain/habits';
 import type { Period } from '../src/domain/periods';
-import { computeStreak, dailyStreak, streakFor, weeklyStreak } from '../src/domain/streak';
+import {
+  computeStreak,
+  dailyStreak,
+  hasClosedPeriod,
+  streakFor,
+  weeklyStreak,
+} from '../src/domain/streak';
 
 /** 'HHM' -> three scored periods, oldest first. */
 function periodsFrom(sequence: string): readonly Period[] {
@@ -323,5 +329,39 @@ describe("streakFor — wiring a habit's cadence to the right walk", () => {
 
     expect(streakFor(habitById('walking'), [], '2026-09-15', TODAY).count).toBe(0);
     expect(streakFor(habitById('lifting'), liftingOnly, '2026-09-15', TODAY).count).toBe(1);
+  });
+});
+
+describe('hasClosedPeriod — telling "not started" apart from "reset"', () => {
+  const TODAY = '2026-09-17';
+  const walking = habitById('walking');
+  const lifting = habitById('lifting');
+
+  it('is false on a first run with nothing logged', () => {
+    expect(hasClosedPeriod(walking, [], TODAY, TODAY)).toBe(false);
+  });
+
+  it('is true once a day has closed', () => {
+    expect(hasClosedPeriod(walking, [], '2026-09-16', TODAY)).toBe(true);
+  });
+
+  it('is true the moment today is logged, closing nothing but scoring it', () => {
+    expect(hasClosedPeriod(walking, [TODAY], TODAY, TODAY)).toBe(true);
+  });
+
+  it('is false for a lifting week still open and still short', () => {
+    // Two of three days in, on a Thursday: nothing has been scored, so the row
+    // is starting rather than starting again.
+    expect(hasClosedPeriod(lifting, ['2026-09-14', '2026-09-15'], '2026-09-14', TODAY)).toBe(false);
+  });
+
+  it('is true once the open lifting week reaches its target (D2)', () => {
+    const log = ['2026-09-14', '2026-09-15', '2026-09-16'];
+
+    expect(hasClosedPeriod(lifting, log, '2026-09-14', TODAY)).toBe(true);
+  });
+
+  it('is true once a lifting week has closed, hit or missed', () => {
+    expect(hasClosedPeriod(lifting, [], '2026-09-07', TODAY)).toBe(true);
   });
 });

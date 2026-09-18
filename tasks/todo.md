@@ -3,18 +3,21 @@
 Full specifications (acceptance criteria, verification, files, scope) live in
 [tasks/plan.md](plan.md). This file is the ordered checklist.
 
-**Status as of 2026-09-18:** **Phases 1 and 2 are complete.** 102 tests passing;
-`test`, `typecheck`, `lint` and `build` all green; 100% branch and line coverage
-on every domain module, measured rather than asserted.
+**Status as of 2026-09-18:** **Phases 1, 2 and 3 are complete, and Phase 4 is
+complete except the history strip (Task 12).** 301 tests passing; `test`,
+`typecheck`, `lint` and `build` all green; 100% branch and line coverage on every
+domain module, 95% branch overall.
 
 D1–D3 were confirmed on 2026-09-18 and are encoded in `periods.ts` / `streak.ts`.
 Plan Open Question 1 is closed.
 
-**Next up:** Task 7 (`localStore.ts`). Phase 3 depends only on Task 3, which is
-now done, so Phase 3 and Phase 4's Task 9 are unblocked.
+**Next up:** Task 12 (history strip), then Phase 5 (backup). Task 13 can start in
+parallel — `storage/schema.ts` already holds the validator it needs.
 
-**Awaiting you:** the Foundation and Domain core checkpoints both end in a human
-review. Everything mechanical in them passes; the review itself is outstanding.
+**Awaiting you:** three checkpoints now end in a human review — Foundation,
+Domain core, and UI slices. Everything mechanical in them passes; the reviews
+themselves are outstanding. The UI slices checkpoint also needs the in-browser
+pass: the jsdom suite covers the flow, but nobody has yet opened the built page.
 
 Legend: `[x]` complete and verified · `[ ]` not started.
 
@@ -74,25 +77,79 @@ Legend: `[x]` complete and verified · `[ ]` not started.
 
 ## Phase 3: Persistence
 
-- [ ] **Task 7: `localStore.ts`** — load/validate/save, first-run seed, nothing written until first mutation (AC6). *(S, after T3 — unblocked)*
-- [ ] **Task 8: Storage failure modes** — memory mode, corruption quarantine, quota, future schema. *(S, after T7)*
+- [x] **Task 7: `localStore.ts`** — load/validate/save, first-run seed, nothing written until first mutation (AC6). *(S, after T3)*
+  - Document validation, version dispatch and the migration seam split into
+    `storage/schema.ts`: `backup.ts` (Task 13) needs the same validator, and two
+    validators can disagree about what a valid document is. 40 tests.
+  - `openStore` returns a store object rather than free `load` / `save`. The
+    "do not overwrite this" decision is made while reading and has to hold for
+    every later write; a free `save` could not know it, which would put the rule
+    in the UI layer one forgotten branch from destroying a history.
+  - Spec delta: an unsorted or duplicated `log` is **repaired** on read, not
+    quarantined. The repair is provably lossless; quarantining would cost a real
+    history over an ordering slip. Malformed dates are still rejected.
+- [x] **Task 8: Storage failure modes** — memory mode, corruption quarantine, quota, future schema. *(S, after T7)*
+  - Six `status.kind` values, each with its own banner: `stored`, `first-run`,
+    `unavailable`, `corrupt`, `unsupported-version`, `future-version`.
+  - A read that throws is treated as read-only, not just unreadable: a key that
+    could not be read may still hold a real history, and a blind overwrite is how
+    it is lost. Same rule when quarantining a damaged value fails.
+  - Save failures are not latched — un-marking a day shrinks the document, so a
+    retry after a quota failure can legitimately succeed.
 
 ### Checkpoint: Persistence
-- [ ] Round-trip save/load is deep-equal
-- [ ] All four failure modes tested; no test leaves a stored value overwritten
-- [ ] No derived value appears in the stored JSON
+- [x] Round-trip save/load is deep-equal
+- [x] All four failure modes tested; no test leaves a stored value overwritten
+  - Asserted directly: every corruption test checks the original bytes are still
+    under the live key after opening the store.
+- [x] No derived value appears in the stored JSON
+  - `serializeDocument` builds the document field by field, so a derived value
+    cannot reach the disk even if one reached an `AppState`.
 
 ## Phase 4: UI slices
 
-- [ ] **Task 9: App shell, render loop, `main.ts` wiring** — full re-render from state; one save-then-render update path. *(M, after T6 + T8)*
-- [ ] **Task 10: Today card** — three rows, toggle today (D1), streak labels with miss annotation (AC1–AC3). *(S, after T9)*
-- [ ] **Task 11: Lifting weekly progress** — pips, `N of 3 this week`, days left, weeks-unit streak (D2). *(S, after T10)*
+- [x] **Task 9: App shell, render loop, `main.ts` wiring** — full re-render from state; one save-then-render update path. *(M, after T6 + T8)*
+  - Split into `main.ts` (composition root: the one clock read, the one
+    `browserStorage()` call) and `app.ts` (`startApp({ root, today, storage })`).
+    That seam is what lets the integration suite start the whole app against a
+    fixed Thursday and a storage that fails on purpose.
+  - `mount` builds the skeleton once; `render` replaces only the state-derived
+    regions. Two things must survive a full rebuild: **focus**, restored by
+    habit id so a keyboard user is not stranded after every mark, and the
+    **live region**, which cannot announce anything if it is replaced.
+  - Asserted by a source-level test: no clock read anywhere under `src/domain/`
+    or `src/ui/`, and no `toISOString` in `src/` at all.
+- [x] **Task 10: Today card** — three rows, toggle today (D1), streak labels with miss annotation (AC1–AC3). *(S, after T9)*
+  - Wording lives in `ui/labels.ts` as pure functions, so the product's tone is
+    asserted directly rather than read off the DOM. 29 tests.
+  - Spec delta: the unit is spelled out — `12 days, one miss` rather than the
+    mock's `12, one miss`. A bare number next to a row showing weekly progress is
+    the confusion AC1 exists to prevent. `0` stays bare.
+  - A zeroed streak offers `Start again today` only when the walk has actually
+    scored a period (`hasClosedPeriod`), so a lifting week two days into its
+    three is not told to start again.
+- [x] **Task 11: Lifting weekly progress** — pips, `N of 3 this week`, days left, weeks-unit streak (D2). *(S, after T10)*
+  - `openWeekProgress` lives in `periods.ts` and applies the same open-week rule
+    `weeklyPeriods` does, so the pips fill in the render the streak ticks up.
+  - The pips are `aria-hidden` decoration over a sentence that already says it:
+    shape and colour are never the only channel carrying the count.
 - [ ] **Task 12: History strip** — 14 days, Monday separators, click to back-fill. *(M, after T11)*
+  - Note from Task 10: `toggleDay` deliberately never moves `startedOn`. Pulling
+    it back to a back-filled older day does not undo — un-toggling would leave
+    the walk starting before the user ever tracked, turning those days into
+    misses and resetting a streak from an accidental click. How the walk's start
+    moves when back-filling past it is this task's decision to make.
 
 ### Checkpoint: UI slices
 - [ ] Core flow works end to end in the browser: toggle → streak → reload → intact
-- [ ] AC1 holds — no combined number anywhere in the UI
-- [ ] Keyboard-only operation of every toggle and history cell
+  - Covered in jsdom, including reload-renders-identically. **The in-browser pass
+    is outstanding** — the built page has been served and its assets resolve, but
+    nobody has clicked it.
+- [x] AC1 holds — no combined number anywhere in the UI
+- [x] Keyboard-only operation of every toggle and history cell
+  - Every toggle is a real `<button type="button">` with no `tabindex`, carrying
+    `aria-pressed` and an accessible name including the habit. Focus survives the
+    re-render. History cells arrive with Task 12.
 - [ ] Review with human before proceeding
 
 ## Phase 5: Backup

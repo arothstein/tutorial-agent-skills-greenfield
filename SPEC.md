@@ -70,7 +70,7 @@ a zeroed streak.
 |---|---|
 | Language | TypeScript 5.x, `strict: true` |
 | Build / dev | Vite 6.x |
-| UI | No framework. DOM + template literals |
+| UI | No framework. DOM construction, never HTML strings |
 | Styling | Plain CSS, custom properties, one stylesheet |
 | Persistence | `window.localStorage` |
 | Test runner | Vitest 3.x |
@@ -97,30 +97,38 @@ Lint fix:  pnpm run lint -- --fix
 
 ```
 src/
-  main.ts              -> Entry point: wires storage -> state -> render
+  main.ts              -> Composition root: reads the clock once, finds storage
+  app.ts               -> Wires storage -> state -> render; owns the one update path
   domain/
     habits.ts          -> The three habit definitions (frozen constant)
     dates.ts           -> Local-date keys, day/week arithmetic, week boundaries
     periods.ts         -> Log -> scored periods. Owns the open-period rule (D2).
     streak.ts          -> Streak engine. Pure. No I/O, no clock access.
-    model.ts           -> AppState types, defaults, invariants
+    model.ts           -> AppState types, defaults, invariants, the day toggle
   storage/
+    schema.ts          -> Document shape, validation, version dispatch, migrations
     localStore.ts      -> load/save against localStorage, quota + corruption handling
     backup.ts          -> Export to file, import from file, validation
   ui/
+    dom.ts             -> Element construction. The app never assembles HTML strings.
+    labels.ts          -> Every string shown, as pure functions
+    notices.ts         -> Storage failure banners
     render.ts          -> Full re-render from state
     todayCard.ts       -> The three habit rows
     historyStrip.ts    -> 14-day grid
     backupBar.ts       -> Save/Load controls
   styles.css
+  vite-env.d.ts        -> Vite ambient types
 tests/
   setup/no-network.ts  -> AC7 guard: throwing stubs, loaded before every suite
   no-network.test.ts   -> Asserts the guard is live
   streak.test.ts       -> Table-driven streak cases (the critical suite)
   dates.test.ts        -> Week boundaries, DST, month/year rollover
   periods.test.ts      -> Period lists, target rule, open-period rule
-  model.test.ts        -> Habit table invariants and the first-run seed
-  localStore.test.ts   -> Round-trip, corruption, quota, migration
+  model.test.ts        -> Habit table invariants, the first-run seed, the toggle
+  schema.test.ts       -> Validation, repair, version dispatch, the migration chain
+  localStore.test.ts   -> Round-trip, corruption, quota, unavailability
+  labels.test.ts       -> The exact wording of every readout
   backup.test.ts       -> Export/import fidelity and rejection cases
   app.test.ts          -> jsdom integration: click -> state -> render
 docs/
@@ -128,6 +136,14 @@ docs/
 SPEC.md
 index.html
 ```
+
+**Why the extra modules.** `schema.ts` is split from `localStore.ts` because the
+document's shape, its version policy and its migrations are one concern that
+`backup.ts` needs too - the alternative is two validators that can disagree about
+what a valid document is. `app.ts` is split from `main.ts` so the whole app can be
+started against an injected date and an injected storage; that is what makes the
+integration suite possible without a browser. `dom.ts` and `labels.ts` exist so
+markup construction and user-facing wording are each testable on their own.
 
 ## Data Model
 
@@ -187,6 +203,40 @@ Example document:
 - **`startedOn` bounds the walk.** Without it, a first-run app would evaluate an
   infinite past of misses.
 
+### The `localStore` contract
+
+`openStore({ today, storage })` reads the key once and returns a store:
+
+```ts
+interface HabitStore {
+  readonly status: StoreStatus;       // how `initial` was arrived at
+  readonly initial: AppState;         // the state to render - usable in every status
+  save(state: AppState): SaveResult;  // never throws
+}
+```
+
+Two properties do the work:
+
+- **`initial` is always a usable state.** No failure mode hands the caller
+  nothing, because a second place that seeds a first run is a second place for it
+  to be seeded wrongly.
+- **A store, not free `load` / `save` functions.** Some documents must not be
+  written over: one from a newer build, or a damaged one that could not be copied
+  aside first. That decision is made while reading and must hold for every later
+  write. A free `save(storage, state)` cannot know it, which would put the rule in
+  the UI layer - one forgotten branch away from destroying the user's history.
+  Holding it inside the object that owns the key makes the unsafe write
+  unreachable instead.
+
+`status.kind` is one of `stored`, `first-run`, `unavailable`, `corrupt`,
+`unsupported-version`, `future-version`. `save` returns
+`{ ok: true } | { ok: false, failure }`, where `failure.kind` is `quota`,
+`unavailable`, or `read-only`. Failures are not latched: un-marking a day shrinks
+the document, so a save after a quota failure can legitimately succeed.
+
+Nothing is written while opening, on any path except quarantining a damaged value
+- so a first run the user never touches leaves no trace (AC6).
+
 ### Integrity and failure handling
 
 | Condition | Behavior |
@@ -195,11 +245,19 @@ Example document:
 | `localStorage` throws on read/write (private mode, disabled) | Run in **memory-only mode**. Show a persistent warning banner. Do not crash. |
 | JSON unparseable, or fails schema validation | Do **not** overwrite. Preserve the bad value at `habit-tracker.v1.corrupt.<timestamp>`, start fresh, and tell the user where the old value went and that **Load backup** can restore. |
 | `QuotaExceededError` on write | Surface a non-dismissable error; keep the in-memory state so the session is not lost. |
-| Unknown `schemaVersion` (a future version) | Refuse to load. Read-only warning rather than a lossy downgrade. |
+| Unknown `schemaVersion` (a future version) | Refuse to load. Read-only warning rather than a lossy downgrade. The stored value is left completely alone - it is newer, not damaged. |
+| A `schemaVersion` older than any this build can migrate | Treated as the corrupt row above: quarantined, fresh state, and a banner naming the version and the quarantine key. Never guessed at. |
+| `log` array unsorted or holding a duplicate | **Repaired on read**, not quarantined. A set of calendar dates has exactly one sorted, duplicate-free form, so the fix cannot guess wrong; quarantining would cost a real history to satisfy an invariant the reader can simply restore. Malformed *dates* have no correct repair and are still rejected. |
+| `log` holding a habit id this build does not define | Corrupt. Dropping a fourth habit silently would destroy data the user can still see, so the document is quarantined whole. |
 
 Migration policy: `schemaVersion` is bumped only on a breaking shape change, and
 a bump ships with a migration function `v(n-1) -> v(n)` plus a test that migrates
-a real captured v(n-1) document.
+a real captured v(n-1) document. `storage/schema.ts` holds the seam: a step is
+registered in `MIGRATIONS` keyed by the version it reads, and `applyMigrations`
+walks the chain one version at a time. A gap in the chain fails rather than
+skipping a step - jumping a version would hand the validator a shape no released
+build ever wrote. The table ships empty because version 1 is the first there has
+ever been.
 
 ### Backup file
 
@@ -388,6 +446,16 @@ formats, no cloud affordance.
 
 ### Presentation rules
 
+- **Streak wording as shipped:** `12 days, one miss`, `6 weeks`, and a bare `0`.
+  The mock above draws the daily rows as `12, one miss`, with the unit implied by
+  context. The unit is spelled out instead: a bare number beside a row that also
+  shows weekly progress is exactly the confusion AC1 exists to prevent, and "0
+  days" is dropped to a bare `0` so the number cannot read as a measure of how
+  badly it went.
+- A zeroed streak that has actually scored periods shows `Start again today`. One
+  that has simply not started yet shows nothing - a lifting week two days into
+  its three has a count of zero and nothing to start again. The two are told
+  apart by asking the period list, not the log.
 - No streak is ever rendered in an alarm color. Reset is neutral.
 - The three streaks are never summed, averaged, or shown as one number (AC1).
 - Every state above renders from `AppState` alone — there is no state a reload

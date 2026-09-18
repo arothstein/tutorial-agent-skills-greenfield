@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { dailyPeriods, weeklyPeriods } from '../src/domain/periods';
+import { dailyPeriods, openWeekProgress, weeklyPeriods } from '../src/domain/periods';
 
 /** Mon 2026-09-14 .. Sun 2026-09-20 is the reference week; 09-17 is a Thursday. */
 
@@ -168,5 +168,74 @@ describe('weeklyPeriods — the open week (D2)', () => {
 
   it('is empty on the first run with nothing logged', () => {
     expect(weeklyPeriods([], 3, '2026-09-17', '2026-09-17')).toEqual([]);
+  });
+});
+
+describe('openWeekProgress — what the lifting row still owes this week (D2)', () => {
+  /** Thu 2026-09-17 sits in the Mon 09-14 .. Sun 09-20 week. */
+
+  it('counts the distinct days logged in the open week', () => {
+    const progress = openWeekProgress(['2026-09-14', '2026-09-16'], 3, '2026-09-17');
+
+    expect(progress.logged).toBe(2);
+  });
+
+  it('reports the target it is counting towards', () => {
+    expect(openWeekProgress([], 3, '2026-09-17').target).toBe(3);
+  });
+
+  it('counts a day twice logged once (D1)', () => {
+    const progress = openWeekProgress(['2026-09-14', '2026-09-14'], 3, '2026-09-17');
+
+    expect(progress.logged).toBe(1);
+  });
+
+  it('ignores days from the week before', () => {
+    const progress = openWeekProgress(['2026-09-13', '2026-09-16'], 3, '2026-09-17');
+
+    expect(progress.logged).toBe(1);
+  });
+
+  it('ignores days later in the open week than today', () => {
+    // A stray future-dated entry must not report progress the user has not made.
+    const progress = openWeekProgress(['2026-09-16', '2026-09-19'], 3, '2026-09-17');
+
+    expect(progress.logged).toBe(1);
+  });
+
+  it('counts today as one of the days remaining', () => {
+    // Thursday through Sunday is a span of 3, but four days are still usable —
+    // SPEC's lifting row reads "4 days left" on a Thursday.
+    expect(openWeekProgress([], 3, '2026-09-17').daysLeft).toBe(4);
+  });
+
+  it('leaves one day on the Sunday that closes the week', () => {
+    expect(openWeekProgress([], 3, '2026-09-20').daysLeft).toBe(1);
+  });
+
+  it('leaves the whole week on its Monday', () => {
+    expect(openWeekProgress([], 3, '2026-09-14').daysLeft).toBe(7);
+  });
+
+  it('caps logged at the target once the week is met', () => {
+    // The row shows "3 of 3", never "4 of 3": the week is a hit, not a score.
+    const progress = openWeekProgress(
+      ['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17'],
+      3,
+      '2026-09-17',
+    );
+
+    expect(progress.logged).toBe(3);
+  });
+
+  it('is met exactly when the week already hits, matching weeklyPeriods', () => {
+    const log = ['2026-09-14', '2026-09-15', '2026-09-16'];
+
+    expect(openWeekProgress(log, 3, '2026-09-17').isMet).toBe(true);
+    expect(weeklyPeriods(log, 3, '2026-09-14', '2026-09-17')).toEqual([{ hit: true }]);
+  });
+
+  it('is not met while the week is still short', () => {
+    expect(openWeekProgress(['2026-09-14'], 3, '2026-09-17').isMet).toBe(false);
   });
 });
