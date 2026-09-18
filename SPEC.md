@@ -101,6 +101,7 @@ src/
   domain/
     habits.ts          -> The three habit definitions (frozen constant)
     dates.ts           -> Local-date keys, day/week arithmetic, week boundaries
+    periods.ts         -> Log -> scored periods. Owns the open-period rule (D2).
     streak.ts          -> Streak engine. Pure. No I/O, no clock access.
     model.ts           -> AppState types, defaults, invariants
   storage/
@@ -113,8 +114,12 @@ src/
     backupBar.ts       -> Save/Load controls
   styles.css
 tests/
+  setup/no-network.ts  -> AC7 guard: throwing stubs, loaded before every suite
+  no-network.test.ts   -> Asserts the guard is live
   streak.test.ts       -> Table-driven streak cases (the critical suite)
   dates.test.ts        -> Week boundaries, DST, month/year rollover
+  periods.test.ts      -> Period lists, target rule, open-period rule
+  model.test.ts        -> Habit table invariants and the first-run seed
   localStore.test.ts   -> Round-trip, corruption, quota, migration
   backup.test.ts       -> Export/import fidelity and rejection cases
   app.test.ts          -> jsdom integration: click -> state -> render

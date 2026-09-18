@@ -266,7 +266,8 @@ where DST would produce a 23-hour day; it is built before anything depends on it
 - [ ] `toDateKey(date: Date): DateKey` formats from local `getFullYear`/
       `getMonth`/`getDate` — never `toISOString()` — and a test covers a late
       evening local time in a negative-offset zone where `toISOString()` is wrong.
-- [ ] `addDays`, `daysBetween`, `mondayOf`, `sundayOf` and `eachDay(from, to)`
+- [ ] `addDays`, `daysBetween`, `mondayOf`, `sundayOf` and `daysInclusive(first,
+      last)` (shipped name; this plan first called it `eachDay`)
       normalize to local noon before arithmetic, so spring-forward and fall-back
       dates neither skip nor repeat a date key.
 - [ ] Week helpers treat **Monday** as the first day; tests cover Sunday→Monday
