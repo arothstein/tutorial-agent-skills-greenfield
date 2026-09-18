@@ -1,4 +1,5 @@
 import type { DateKey } from './dates';
+import type { Habit } from './model';
 import { dailyPeriods, weeklyPeriods, type Period } from './periods';
 
 export interface Streak {
@@ -70,4 +71,28 @@ export function weeklyStreak(
     ...computeStreak(weeklyPeriods(log, target, startedOn, today)),
     unit: 'weeks',
   };
+}
+
+/**
+ * Current streak for one habit, in that habit's own unit.
+ *
+ * The only place cadence is dispatched on. Everything downstream — the Today
+ * card, the history strip — asks for a habit's streak and is handed a count
+ * already labelled `days` or `weeks`, so a week count can never be rendered as
+ * if it were days (AC1, AC5).
+ *
+ * A daily habit's target is 1 by definition: presence in the log is the hit, so
+ * `dailyStreak` takes no target.
+ *
+ * Pure: `today` is injected, never read from the clock.
+ */
+export function streakFor(
+  habit: Habit,
+  log: readonly DateKey[],
+  startedOn: DateKey,
+  today: DateKey,
+): StreakResult {
+  return habit.cadence === 'daily'
+    ? dailyStreak(log, startedOn, today)
+    : weeklyStreak(log, habit.target, startedOn, today);
 }
